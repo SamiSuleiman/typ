@@ -5,7 +5,7 @@ import { FontsSelectionComponent } from './fonts-selection/fonts-selection.compo
 
 @Component({
   template: `
-    <main class="p-2 flex flex-col items-start justify-center gap-1">
+    <main class="p-2 flex items-start justify-center gap-1">
       <div>
         <app-fonts-selection></app-fonts-selection>
       </div>
