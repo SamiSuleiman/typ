@@ -1,5 +1,4 @@
-export const DEFAULT_EDITOR_CONTENT = `
-import { Cookies } from './cookies.js'
+export const DEFAULT_EDITOR_CONTENT = `import { Cookies } from './cookies.js'
 import { Samples } from './samples.js'
 
 const numerals = 1234567890

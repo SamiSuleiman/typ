@@ -1,7 +1,7 @@
-import { Component, model } from '@angular/core';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DEFAULT_EDITOR_CONTENT } from './home.consts';
 import { FontsSelectionComponent } from './fonts-selection/fonts-selection.component';
+import { FontsPreviewComponent } from './fonts-preview/fonts-preview.component';
 
 @Component({
   template: `
@@ -10,17 +10,11 @@ import { FontsSelectionComponent } from './fonts-selection/fonts-selection.compo
         <app-fonts-selection></app-fonts-selection>
       </div>
       <div class="w-full">
-        <textarea
-          class="textarea w-full"
-          [rows]="40"
-          [(ngModel)]="$content"
-        ></textarea>
+        <app-fonts-preview></app-fonts-preview>
       </div>
     </main>
   `,
-  imports: [FormsModule, FontsSelectionComponent],
+  imports: [FormsModule, FontsSelectionComponent, FontsPreviewComponent],
   selector: 'app-home',
 })
-export class HomeComponent {
-  protected readonly $content = model(DEFAULT_EDITOR_CONTENT);
-}
+export class HomeComponent {}
