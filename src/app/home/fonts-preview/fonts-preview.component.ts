@@ -1,4 +1,4 @@
-import { Component, model } from '@angular/core';
+import { Component, effect, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
 
@@ -19,13 +19,15 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
         />
       </div>
       <div class="w-[80vw] flex gap-2 overflow-scroll">
-        <textarea
-          [style]="{ fontSize: this.$fontSize() + 'px' }"
-          class="textarea grow resize-none overflow max-h-[90vh]"
-          [rows]="45"
-          [value]="$content()"
-          [(ngModel)]="$content"
-        ></textarea>
+        @for (font of $selectedFonts(); track $index) {
+          <textarea
+            [style]="{ fontSize: this.$fontSize() + 'px' }"
+            class="textarea grow resize-none overflow max-h-[90vh]"
+            [rows]="45"
+            [value]="$content()"
+            [(ngModel)]="$content"
+          ></textarea>
+        }
       </div>
     </div>
   `,
@@ -33,6 +35,9 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
   selector: 'app-fonts-preview',
 })
 export class FontsPreviewComponent {
+  readonly $selectedFonts = input.required<string[]>({
+    alias: 'selectedFonts',
+  });
   protected readonly $content = model(DEFAULT_EDITOR_CONTENT);
   protected readonly $fontSize = model(15);
 
