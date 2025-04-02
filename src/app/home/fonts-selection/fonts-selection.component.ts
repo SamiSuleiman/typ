@@ -12,7 +12,7 @@ import { FontsSelectionService } from './fonts-selection.service';
 
 @Component({
   template: `
-    <div class="flex gap-1">
+    <div class="flex gap-1 flex-col">
       <input type="file" class="file-input" [multiple]="true" #fileInput />
       <button class="btn" (click)="onSubmit(fileInput.files)">Submit</button>
     </div>

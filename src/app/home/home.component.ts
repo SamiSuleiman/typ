@@ -6,12 +6,12 @@ import { FontsSelectionComponent } from './fonts-selection/fonts-selection.compo
 @Component({
   template: `
     <main class="p-2 flex items-start justify-center gap-1">
-      <div>
+      <div class="max-w-[250px] min-w-[220px]">
         <app-fonts-selection
           (fontsSelected)="onFontsSelecetd($event)"
         ></app-fonts-selection>
       </div>
-      <div class="w-full">
+      <div class="grow w-full overflow-hidden">
         <app-fonts-preview
           [selectedFonts]="$selectedFonts()"
         ></app-fonts-preview>

@@ -43,12 +43,7 @@ export class FontsSelectionService {
   }
 
   async addFont(file: File): Promise<void> {
-    if (!this.allowedTypes.includes(file.type)) {
-      alert(
-        'Invalid font type. Please upload a TTF, OTF, WOFF, or WOFF2 file.',
-      );
-      return;
-    }
+    if (!this.allowedTypes.includes(file.type)) return;
 
     const fontBase64 = await this.convertToBase64(file);
     if (!fontBase64) return;
@@ -60,10 +55,8 @@ export class FontsSelectionService {
 
     const cachedFonts = this.getFonts();
 
-    if (cachedFonts.some((font: SelectedFont) => font.fontName === fontName)) {
-      alert('Font already added.');
+    if (cachedFonts.some((font: SelectedFont) => font.fontName === fontName))
       return;
-    }
 
     cachedFonts.push({ fontName, fontBase64 });
     localStorage.setItem('cachedFonts', JSON.stringify(cachedFonts));
