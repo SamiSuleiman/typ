@@ -20,18 +20,24 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
       </div>
       <div class="flex gap-2 overflow-scroll w-full">
         @for (font of $selectedFonts(); track $index) {
-          <textarea
-            [style]="{
-              fontSize: this.$fontSize() + 'px',
-              fontFamily: font + ', sans-serif',
-            }"
-            class="textarea grow resize-none overflow max-h-[90vh] min-w-[220px]"
-            [rows]="45"
-            [value]="$content()"
-            [(ngModel)]="$content"
-          ></textarea>
+          <div class="grow overflow max-h-[90vh] min-w-[220px] flex flex-col">
+            <span class="badge">{{ font }}</span>
+            <textarea
+              [style]="{
+                fontSize: this.$fontSize() + 'px',
+                fontFamily: font + ', sans-serif',
+              }"
+              class="textarea resize-none w-full"
+              [rows]="45"
+              [value]="$content()"
+              [(ngModel)]="$content"
+            >
+            </textarea>
+          </div>
         } @empty {
-          <span class="text-neutral-content m-auto p-5 font-bold">No fonts selected</span>
+          <span class="text-neutral-content m-auto p-5 font-bold"
+            >No fonts selected</span
+          >
         }
       </div>
     </div>
