@@ -30,6 +30,8 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
             [value]="$content()"
             [(ngModel)]="$content"
           ></textarea>
+        } @empty {
+          <span class="text-neutral-content m-auto p-5 font-bold">No fonts selected</span>
         }
       </div>
     </div>
