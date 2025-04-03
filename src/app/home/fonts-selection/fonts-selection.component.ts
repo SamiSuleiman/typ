@@ -31,6 +31,10 @@ import { FontsSelectionService } from './fonts-selection.service';
             x
           </button>
         </li>
+      } @empty {
+        <span class="text-neutral-content m-auto p-5 font-bold"
+          >Upload some fonts.</span
+        >
       }
     </ul>
   `,
