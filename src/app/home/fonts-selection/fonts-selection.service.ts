@@ -1,5 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { SelectedFont } from './fonts-selection.model';
+import { BehaviorSubject, from, Observable, switchMap, map } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root',
@@ -15,69 +17,119 @@ export class FontsSelectionService {
     'application/font-woff',
     'application/font-woff2',
   ];
-  private readonly $fonts = signal<SelectedFont[]>([]);
+  private readonly dbName = 'FontsDB';
+  private readonly storeName = 'fonts';
+  private fontsSubject = new BehaviorSubject<SelectedFont[]>([]);
+  readonly $fonts = toSignal(this.fontsSubject);
 
-  getFonts(): SelectedFont[] {
-    const fonts = this.$fonts();
-    if (fonts.length > 0) return fonts;
+  private initDB(): Observable<IDBDatabase> {
+    return new Observable((observer) => {
+      const request = indexedDB.open(this.dbName, 1);
 
-    const cachedFonts = JSON.parse(localStorage.getItem('cachedFonts') || '[]');
-    cachedFonts.forEach(
-      async ({
-        fontName,
-        fontBase64,
-      }: {
-        fontName: string;
-        fontBase64: string;
-      }) => {
-        const newFont = await new FontFace(
-          fontName,
-          `url(${fontBase64})`,
-        ).load();
-        document.fonts.add(newFont);
-      },
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'fontName' });
+        }
+      };
+
+      request.onsuccess = () => {
+        observer.next(request.result);
+        observer.complete();
+      };
+      request.onerror = () => observer.error(request.error);
+    });
+  }
+
+  loadFonts(): Observable<void> {
+    return this.initDB().pipe(
+      switchMap(
+        (db) =>
+          new Observable<void>((observer) => {
+            const transaction = db.transaction(this.storeName, 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.getAll();
+
+            request.onsuccess = async () => {
+              const fonts = request.result as SelectedFont[];
+              for (const { fontName, fontBase64 } of fonts) {
+                const newFont = await new FontFace(
+                  fontName,
+                  `url(${fontBase64})`,
+                ).load();
+                document.fonts.add(newFont);
+              }
+              this.fontsSubject.next(fonts);
+              observer.next();
+              observer.complete();
+            };
+            request.onerror = () => observer.error(request.error);
+          }),
+      ),
     );
-
-    this.$fonts.set(cachedFonts);
-    return cachedFonts;
   }
 
-  async addFont(file: File): Promise<void> {
-    if (!this.allowedTypes.includes(file.type)) return;
+  addFont(file: File): Observable<void> {
+    if (!this.allowedTypes.includes(file.type)) return from(Promise.resolve());
 
-    const fontBase64 = await this.convertToBase64(file);
-    if (!fontBase64) return;
+    return this.convertToBase64(file).pipe(
+      switchMap((fontBase64) => {
+        if (!fontBase64) return from(Promise.resolve());
 
-    const fontName = file.name.replace(/\.[^/.]+$/, '');
+        const fontName = file.name.replace(/\.[^/.]+$/, '');
+        return from(new FontFace(fontName, `url(${fontBase64})`).load()).pipe(
+          switchMap((fontFace) => {
+            document.fonts.add(fontFace);
 
-    const newFont = await new FontFace(fontName, `url(${fontBase64})`).load();
-    document.fonts.add(newFont);
+            const cachedFonts = this.fontsSubject.getValue();
+            if (cachedFonts.some((font) => font.fontName === fontName)) {
+              return from(Promise.resolve());
+            }
 
-    const cachedFonts = this.getFonts();
+            const newFontData: SelectedFont = { fontName, fontBase64 };
+            const updatedFonts = [...cachedFonts, newFontData];
+            this.fontsSubject.next(updatedFonts);
 
-    if (cachedFonts.some((font: SelectedFont) => font.fontName === fontName))
-      return;
-
-    cachedFonts.push({ fontName, fontBase64 });
-    localStorage.setItem('cachedFonts', JSON.stringify(cachedFonts));
-    this.$fonts.set(cachedFonts);
+            return this.initDB().pipe(
+              map((db) => {
+                const transaction = db.transaction(this.storeName, 'readwrite');
+                const store = transaction.objectStore(this.storeName);
+                store.put(newFontData);
+              }),
+            );
+          }),
+        );
+      }),
+    );
   }
 
-  removeFont(fontName: string) {
-    const fonts = this.$fonts();
-    const index = fonts.findIndex((font) => font.fontName === fontName);
-    if (index === -1) return;
-    fonts.splice(index, 1);
-    this.$fonts.set(fonts);
-    localStorage.setItem('cachedFonts', JSON.stringify(fonts));
+  removeFont(fontName: string): Observable<void> {
+    const updatedFonts = this.fontsSubject
+      .getValue()
+      .filter((font) => font.fontName !== fontName);
+    this.fontsSubject.next(updatedFonts);
+
+    return this.initDB().pipe(
+      map((db) => {
+        const transaction = db.transaction(this.storeName, 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        store.delete(fontName);
+      }),
+    );
   }
 
-  async convertToBase64(file: File): Promise<string | null> {
-    return new Promise((resolve) => {
+  private convertToBase64(file: File): Observable<string | null> {
+    return new Observable((observer) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
+      reader.onload = () => {
+        observer.next(reader.result as string);
+        observer.complete();
+      };
+      reader.onerror = () => {
+        observer.next(null);
+        observer.complete();
+      };
     });
   }
 }

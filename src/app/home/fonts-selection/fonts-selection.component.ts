@@ -1,15 +1,7 @@
-import {
-  Component,
-  effect,
-  inject,
-  OnInit,
-  output,
-  signal,
-} from '@angular/core';
+import { Component, effect, inject, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { tap } from 'rxjs';
-import { SelectedFont } from './fonts-selection.model';
+import { take, tap, zip } from 'rxjs';
 import { FontsSelectionService } from './fonts-selection.service';
 
 @Component({
@@ -23,7 +15,7 @@ import { FontsSelectionService } from './fonts-selection.service';
     <ul
       class="list bg-base-100 rounded-box shadow-md max-h-[90vh] overflow-y-auto"
     >
-      @for (font of $fonts(); track font.fontName) {
+      @for (font of fontsSelectionService.$fonts(); track font.fontName) {
         <li class="list-row items-center" [formGroup]="fontForm">
           <input
             [formControlName]="font.fontName"
@@ -45,22 +37,23 @@ import { FontsSelectionService } from './fonts-selection.service';
   imports: [FormsModule, ReactiveFormsModule],
   selector: 'app-fonts-selection',
 })
-export class FontsSelectionComponent implements OnInit {
-  private readonly fontsSelectionService = inject(FontsSelectionService);
+export class FontsSelectionComponent {
   private readonly formBuilder = inject(FormBuilder);
+  protected readonly fontsSelectionService = inject(FontsSelectionService);
 
   protected readonly $fontsSelected = output<string[]>({
     alias: 'fontsSelected',
   });
-
-  protected readonly $fonts = signal<SelectedFont[]>([]);
   protected readonly fontForm = this.formBuilder.group({});
 
   constructor() {
-    effect(() => {
-      const fonts = this.$fonts();
+    this.fontsSelectionService
+      .loadFonts()
+      .pipe(takeUntilDestroyed())
+      .subscribe();
 
-      fonts.forEach((font) => {
+    effect(() => {
+      this.fontsSelectionService.$fonts()?.forEach((font) => {
         const currControls = Object.keys(this.fontForm.controls);
         if (currControls.includes(font.fontName)) return;
         this.fontForm.addControl(font.fontName, this.formBuilder.control(true));
@@ -80,27 +73,22 @@ export class FontsSelectionComponent implements OnInit {
       .subscribe();
   }
 
-  ngOnInit(): void {
-    const fonts = this.fontsSelectionService.getFonts();
-    this.$fonts.set(fonts);
-  }
-
-  protected onRemoveFont(fontName: string) {
+  protected onRemoveFont(fontName: string): void {
+    const fonts = this.fontsSelectionService.$fonts();
+    if (!fonts) return;
     this.fontForm.removeControl(fontName);
-    this.fontsSelectionService.removeFont(fontName);
-    this.$fonts.set([...this.fontsSelectionService.getFonts()]);
+    this.fontsSelectionService.removeFont(fontName).pipe(take(1)).subscribe();
   }
 
-  protected async onSubmit(selectedFiles: FileList | null) {
+  protected onSubmit(selectedFiles: FileList | null): void {
     if (!selectedFiles) return;
 
-    await Promise.all(
+    zip(
       Array.from(selectedFiles).map((file) =>
         this.fontsSelectionService.addFont(file),
       ),
-    );
-
-    const fonts = this.fontsSelectionService.getFonts();
-    this.$fonts.set([...fonts]);
+    )
+      .pipe(take(1))
+      .subscribe();
   }
 }
