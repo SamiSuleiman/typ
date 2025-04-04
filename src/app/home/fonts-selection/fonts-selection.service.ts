@@ -1,7 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
+import { from, map, Observable, switchMap } from 'rxjs';
 import { SelectedFont } from './fonts-selection.model';
-import { BehaviorSubject, from, Observable, switchMap, map } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root',
@@ -19,8 +18,7 @@ export class FontsSelectionService {
   ];
   private readonly dbName = 'FontsDB';
   private readonly storeName = 'fonts';
-  private fontsSubject = new BehaviorSubject<SelectedFont[]>([]);
-  readonly $fonts = toSignal(this.fontsSubject);
+  readonly $fonts = signal<SelectedFont[]>([]);
 
   private initDB(): Observable<IDBDatabase> {
     return new Observable((observer) => {
@@ -59,7 +57,7 @@ export class FontsSelectionService {
                 ).load();
                 document.fonts.add(newFont);
               }
-              this.fontsSubject.next(fonts);
+              this.$fonts.set(fonts);
               observer.next();
               observer.complete();
             };
@@ -81,14 +79,14 @@ export class FontsSelectionService {
           switchMap((fontFace) => {
             document.fonts.add(fontFace);
 
-            const cachedFonts = this.fontsSubject.getValue();
+            const cachedFonts = this.$fonts();
             if (cachedFonts.some((font) => font.fontName === fontName)) {
               return from(Promise.resolve());
             }
 
             const newFontData: SelectedFont = { fontName, fontBase64 };
             const updatedFonts = [...cachedFonts, newFontData];
-            this.fontsSubject.next(updatedFonts);
+            this.$fonts.set(updatedFonts);
 
             return this.initDB().pipe(
               map((db) => {
@@ -104,10 +102,10 @@ export class FontsSelectionService {
   }
 
   removeFont(fontName: string): Observable<void> {
-    const updatedFonts = this.fontsSubject
-      .getValue()
-      .filter((font) => font.fontName !== fontName);
-    this.fontsSubject.next(updatedFonts);
+    const updatedFonts = this.$fonts().filter(
+      (font) => font.fontName !== fontName,
+    );
+    this.$fonts.set(updatedFonts);
 
     return this.initDB().pipe(
       map((db) => {
