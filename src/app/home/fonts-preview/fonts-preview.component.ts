@@ -4,7 +4,7 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
 
 @Component({
   template: `
-    <div class="flex flex-col gap-1 items-center max-w-[85vw]">
+    <div class="flex flex-col gap-1 max-w-[85vw]">
       <div class="flex items-center gap-1">
         <button class="btn btn-sm btn-outline" (click)="onReset()">
           Reset
@@ -18,7 +18,7 @@ import { DEFAULT_EDITOR_CONTENT } from '../home.consts';
           [(ngModel)]="$fontSize"
         />
       </div>
-      <div class="flex gap-2 overflow-scroll w-full">
+      <div class="flex flex-col gap-2 overflow-scroll w-full md:flex-row">
         @for (font of $selectedFonts(); track $index) {
           <div class="grow overflow max-h-[90vh] min-w-[220px] flex flex-col">
             <span class="badge">{{ font }}</span>
