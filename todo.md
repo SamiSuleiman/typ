@@ -1,2 +1,1 @@
-- allow uploading fonts for comparison
-- 2 possible views, either side to side or overlayed, if overlayed the background (not fully opaque) will have different colors
+- add loading indicator
