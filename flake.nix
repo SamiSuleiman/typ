@@ -1,29 +1,36 @@
 {
-  description = "Dev environment for Angular";
-
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  };
+  description = "Basic dev environment for Angular";
 
   outputs =
-    { self, nixpkgs }:
+    { nixpkgs, ... }:
     let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
+      supportedSystems = [
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+        "x86_64-linux"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = [
-          pkgs.nodejs_22
-          pkgs.pnpm
-          pkgs.git
-        ];
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            buildInputs = [
+              pkgs.nodejs_22
+              pkgs.pnpm
+              pkgs.git
+            ];
 
-        # Optional: env vars shared across web/ and server/
-        # shellHook = ''
-        #   echo "Welcome to the dev shell 🚀"
-        #   export NODE_ENV=development
-        # '';
-      };
+            shellHook = ''
+              export NODE_ENV=development
+            '';
+          };
+        }
+      );
     };
 }
