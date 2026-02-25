@@ -40,54 +40,59 @@
         }
       );
 
-      packages = forLinuxSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
+      packages = nixpkgs.lib.optionalAttrs (builtins.pathExists ./dist/typ/browser) (
+        forLinuxSystems (
+          system:
+          let
+            pkgs = nixpkgs.legacyPackages.${system};
 
-          # The pre-built Angular static assets.
-          # Run `pnpm install && pnpm build` before `nix build .#dockerImage`.
-          staticFiles = pkgs.runCommand "typ-static" { } ''
-            mkdir -p $out/usr/share/nginx/html
-            cp -r ${./dist/typ/browser}/* $out/usr/share/nginx/html/
-          '';
-
-          nginxConf = pkgs.runCommand "typ-nginx-conf" { } ''
-            mkdir -p $out/etc/nginx
-            cp ${./nginx.conf} $out/etc/nginx/nginx.conf
-          '';
-        in
-        {
-          dockerImage = pkgs.dockerTools.buildLayeredImage {
-            name = "mmayss/typ";
-            tag = "master";
-
-            contents = [
-              pkgs.nginx
-              staticFiles
-              nginxConf
-              # nginx needs a tmp dir and log dir at runtime
-              pkgs.dockerTools.fakeNss
-            ];
-
-            extraCommands = ''
-              mkdir -p tmp
-              mkdir -p var/log/nginx
-              mkdir -p var/cache/nginx
+            # The pre-built Angular static assets.
+            # Run `pnpm install && pnpm build` before `nix build .#dockerImage`.
+            staticFiles = pkgs.runCommand "typ-static" { } ''
+              mkdir -p $out/usr/share/nginx/html
+              cp -r ${./dist/typ/browser}/* $out/usr/share/nginx/html/
             '';
 
-            config = {
-              Cmd = [
-                "nginx"
-                "-g"
-                "daemon off;"
+            nginxConf = pkgs.runCommand "typ-nginx-conf" { } ''
+              mkdir -p $out/etc/nginx
+              cp ${./nginx.conf} $out/etc/nginx/nginx.conf
+              ln -s ${pkgs.nginx}/conf/mime.types $out/etc/nginx/mime.types
+            '';
+          in
+          {
+            dockerImage = pkgs.dockerTools.buildLayeredImage {
+              name = "mmayss/typ";
+              tag = "master";
+
+              contents = [
+                pkgs.nginx
+                staticFiles
+                nginxConf
+                # nginx needs a tmp dir and log dir at runtime
+                pkgs.dockerTools.fakeNss
               ];
-              ExposedPorts = {
-                "80/tcp" = { };
+
+              extraCommands = ''
+                mkdir -p tmp
+                mkdir -p var/log/nginx
+                mkdir -p var/cache/nginx
+              '';
+
+              config = {
+                Cmd = [
+                  "nginx"
+                  "-c"
+                  "/etc/nginx/nginx.conf"
+                  "-g"
+                  "daemon off;"
+                ];
+                ExposedPorts = {
+                  "80/tcp" = { };
+                };
               };
             };
-          };
-        }
+          }
+        )
       );
     };
 }
